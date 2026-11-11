@@ -11,6 +11,9 @@ import {
 } from "lucide-react";
 import { Link, NavLink, Route, Routes, useLocation } from "react-router-dom";
 import { formatNaira, type Product } from "./catalog";
+import { AdminPage } from "./AdminPage";
+import { AccountPage } from "./AccountPage";
+import { CertificateAdminPage, CertificatePage } from "./Certificates";
 import {
   AtelierPage,
   CarePage,
@@ -20,21 +23,22 @@ import {
   HomePage,
   NotFoundPage,
   OurStoryPage,
+  PrivacyPage,
   ShippingPage,
   ShopPage,
   StyleAssistantPage,
 } from "./pages";
 
-function BrandLogo() {
+function BrandLogo({ theme }: { theme: "light" | "dark" }) {
   return (
     <Link className="brand-lockup" to="/" aria-label="6Native Tailor home">
-      <svg className="brand-emblem" viewBox="0 0 48 48" role="img" aria-label="6Native emblem">
-        <path d="M25 5 8 15v18l16 10 16-10V15L25 5Z" />
-        <path d="M30 14c-2-2-5-3-8-2-5 1-8 6-8 12 0 7 4 11 10 11 5 0 9-4 9-9 0-5-3-8-8-8-3 0-5 1-7 4" />
-        <path d="M25 6v5M9 15l4 2m28-2-4 2m-5 20 2 4m-19-4-2 4" />
-        <circle cx="24" cy="25" r="1.25" />
-      </svg>
-      <span className="brand-type"><b>6NATIVE</b><small>TAILORING HOUSE · ABUJA</small></span>
+      <img
+        className="brand-logo-image"
+        src={`/images/6native-tailor-logo${theme === "dark" ? "-dark" : ""}.png`}
+        alt=""
+        aria-hidden="true"
+        draggable={false}
+      />
     </Link>
   );
 }
@@ -77,20 +81,22 @@ function App() {
     <div className="site-shell" data-theme={theme}>
       <div className="announcement">
         <span>Complimentary delivery on orders over ₦150,000</span>
-        <Link to="/shop">Discover the new season <ArrowUpRight size={13} /></Link>
+        <Link to="/pieces-to-keep">Discover the new season <ArrowUpRight size={13} /></Link>
       </div>
       <header className="header">
         <button className="icon-button mobile-menu" aria-label={menuOpen ? "Close menu" : "Open menu"} aria-expanded={menuOpen} aria-controls="primary-navigation" onClick={() => setMenuOpen(!menuOpen)}>
           {menuOpen ? <X size={21} /> : <Menu size={21} />}
         </button>
         <nav id="primary-navigation" className={`nav nav-left ${menuOpen ? "nav-open" : ""}`} aria-label="Main navigation">
-          <NavLink to="/shop">Shop</NavLink>
+          <NavLink to="/pieces-to-keep">Pieces to keep</NavLink>
           <NavLink to="/our-story">Our story</NavLink>
           <NavLink to="/atelier">The atelier</NavLink>
+          <NavLink className="mobile-account-link" to="/account">My account</NavLink>
         </nav>
-        <BrandLogo />
+        <BrandLogo theme={theme} />
         <nav className="nav nav-right" aria-label="Customer navigation">
           <NavLink to="/customer-care">Customer care</NavLink>
+          <NavLink className="account-nav-link" to="/account">Account</NavLink>
           <button
             className="icon-button theme-toggle"
             type="button"
@@ -112,6 +118,7 @@ function App() {
       <main>
         <Routes>
           <Route path="/" element={<HomePage addToBag={addToBag} saved={saved} toggleSaved={toggleSaved} />} />
+          <Route path="/pieces-to-keep" element={<ShopPage addToBag={addToBag} saved={saved} toggleSaved={toggleSaved} />} />
           <Route path="/shop" element={<ShopPage addToBag={addToBag} saved={saved} toggleSaved={toggleSaved} />} />
           <Route path="/custom-tailoring" element={<CustomOrderPage />} />
           <Route path="/style-assistant" element={<StyleAssistantPage />} />
@@ -120,7 +127,12 @@ function App() {
           <Route path="/our-story" element={<OurStoryPage />} />
           <Route path="/fit-guide" element={<FitGuidePage />} />
           <Route path="/faq" element={<FaqPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/shipping-returns" element={<ShippingPage />} />
+          <Route path="/account" element={<AccountPage />} />
+          <Route path="/admin" element={<AdminPage />} />
+          <Route path="/admin/certificates" element={<CertificateAdminPage />} />
+          <Route path="/certificate/:id" element={<CertificatePage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>
@@ -128,17 +140,19 @@ function App() {
       <footer className="footer">
         <div className="footer-top">
           <div className="footer-brand">
-            <BrandLogo />
+            <BrandLogo theme={theme} />
             <p>Crafted for your identity.<br />Made with meaning in Abuja, Nigeria.</p>
           </div>
-          <div className="footer-column"><h3>Explore</h3><Link to="/shop">Shop all</Link><Link to="/custom-tailoring">Custom tailoring</Link><Link to="/atelier">Our atelier</Link><Link to="/our-story">Our story</Link></div>
-          <div className="footer-column"><h3>We're here</h3><Link to="/customer-care">Customer care</Link><Link to="/faq">Frequently asked questions</Link><Link to="/shipping-returns">Shipping & returns</Link><Link to="/fit-guide">Measurement guide</Link></div>
+          <div className="footer-column"><h3>Explore</h3><Link to="/pieces-to-keep">Pieces to keep</Link><Link to="/custom-tailoring">Custom tailoring</Link><Link to="/style-assistant">Style assistant</Link><Link to="/atelier">Our atelier</Link><Link to="/our-story">Our story</Link></div>
+          <div className="footer-column"><h3>We're here</h3><Link to="/customer-care">Customer care</Link><Link to="/faq">Frequently asked questions</Link><Link to="/shipping-returns">Shipping & returns</Link><Link to="/fit-guide">Measurement guide</Link><Link to="/privacy">Privacy</Link></div>
           <Newsletter />
         </div>
+        <p className="footer-seo">Bespoke tailoring, alterations and repairs in Abuja, Nigeria.</p>
         <div className="footer-bottom">
           <span>© 2026 6Native Tailor. All rights reserved.</span>
           <span>Made with care in Abuja <span className="footer-heart">♥</span></span>
-          <Link to="/customer-care">Contact us <ArrowUpRight size={12} /></Link>
+          <Link to="/privacy">Privacy <ArrowUpRight size={12} /></Link>
+          <Link to="/admin">Admin access <ArrowUpRight size={12} /></Link>
         </div>
       </footer>
 

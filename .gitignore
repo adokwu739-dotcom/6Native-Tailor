@@ -8,4 +8,7 @@ __pycache__/
 .env
 .env.*
 !.env.example
+backend/media/
+backend/certificates/
+backend/customers.sqlite3*
 .DS_Store
