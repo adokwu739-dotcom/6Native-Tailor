@@ -14,6 +14,7 @@ import { formatNaira, type Product } from "./catalog";
 import { AdminPage } from "./AdminPage";
 import { AccountPage } from "./AccountPage";
 import { CertificateAdminPage, CertificatePage } from "./Certificates";
+import { WebcamMeasurePage } from "./WebcamMeasurePage";
 import {
   AtelierPage,
   CarePage,
@@ -126,6 +127,7 @@ function App() {
           <Route path="/atelier" element={<AtelierPage />} />
           <Route path="/our-story" element={<OurStoryPage />} />
           <Route path="/fit-guide" element={<FitGuidePage />} />
+          <Route path="/webcam-measurement" element={<WebcamMeasurePage />} />
           <Route path="/faq" element={<FaqPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/shipping-returns" element={<ShippingPage />} />
@@ -144,7 +146,7 @@ function App() {
             <p>Crafted for your identity.<br />Made with meaning in Abuja, Nigeria.</p>
           </div>
           <div className="footer-column"><h3>Explore</h3><Link to="/pieces-to-keep">Pieces to keep</Link><Link to="/custom-tailoring">Custom tailoring</Link><Link to="/style-assistant">Style assistant</Link><Link to="/atelier">Our atelier</Link><Link to="/our-story">Our story</Link></div>
-          <div className="footer-column"><h3>We're here</h3><Link to="/customer-care">Customer care</Link><Link to="/faq">Frequently asked questions</Link><Link to="/shipping-returns">Shipping & returns</Link><Link to="/fit-guide">Measurement guide</Link><Link to="/privacy">Privacy</Link></div>
+          <div className="footer-column"><h3>We're here</h3><Link to="/customer-care">Customer care</Link><Link to="/faq">Frequently asked questions</Link><Link to="/shipping-returns">Shipping & returns</Link><Link to="/fit-guide">Measurement guide</Link><Link to="/webcam-measurement">Webcam measurement tool</Link><Link to="/privacy">Privacy</Link></div>
           <Newsletter />
         </div>
         <p className="footer-seo">Bespoke tailoring, alterations and repairs in Abuja, Nigeria.</p>

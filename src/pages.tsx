@@ -22,6 +22,7 @@ const measurements = [
   ["bust", "Bust", "Wrap the tape around the fullest part of your chest."],
   ["waist", "Natural waist", "Measure the narrowest part of your waist."],
   ["hip", "Full hip", "Measure around the fullest part of your hips."],
+  ["neck", "Neck circumference", "Wrap a tape around the base of your neck where a collar sits. Keep it close without squeezing."],
   ["shoulder", "Shoulder width", "Measure from one shoulder edge to the other."],
   ["sleeve", "Sleeve length", "Measure from shoulder edge to your wrist."],
   ["topLength", "Top length", "Measure from your shoulder to the desired hem."],
@@ -37,6 +38,7 @@ const selfMeasurementProfiles: Record<FitProfile, { key: string; label: string; 
     { key: "bust", label: "Bust", hint: "Wrap the tape around the fullest part of your bust, keeping it level." },
     { key: "waist", label: "Natural waist", hint: "Measure the narrowest part of your waist without holding your breath." },
     { key: "hip", label: "Full hip", hint: "Measure around the fullest part of your hips and seat." },
+    { key: "neck", label: "Neck circumference", hint: "Wrap a tape around the base of your neck where a collar sits. Keep it close without squeezing." },
     { key: "shoulder", label: "Shoulder width", hint: "Measure from one shoulder edge to the other across your back." },
     { key: "sleeve", label: "Sleeve length", hint: "Measure from the shoulder edge to your wrist with your arm slightly bent." },
     { key: "dressLength", label: "Dress length", hint: "Measure from the shoulder to your desired hem." },
@@ -45,6 +47,7 @@ const selfMeasurementProfiles: Record<FitProfile, { key: string; label: string; 
     { key: "bust", label: "Chest", hint: "Wrap the tape around the fullest part of your chest, under your arms." },
     { key: "waist", label: "Natural waist", hint: "Measure where you normally wear your trousers." },
     { key: "hip", label: "Seat", hint: "Measure around the fullest part of your seat." },
+    { key: "neck", label: "Neck circumference", hint: "Wrap a tape around the base of your neck where a collar sits. Keep it close without squeezing." },
     { key: "shoulder", label: "Shoulder width", hint: "Measure from one shoulder edge to the other across your back." },
     { key: "sleeve", label: "Sleeve length", hint: "Measure from the shoulder edge to your wrist with your arm slightly bent." },
     { key: "topLength", label: "Shirt / kaftan length", hint: "Measure from the base of your neck to your preferred hem." },
@@ -54,6 +57,7 @@ const selfMeasurementProfiles: Record<FitProfile, { key: string; label: string; 
     { key: "bust", label: "Chest / bust", hint: "Wrap the tape around the fullest part of your chest or bust, keeping it level." },
     { key: "waist", label: "Natural waist", hint: "Measure around your natural waist, keeping the tape comfortably snug." },
     { key: "hip", label: "Full hip / seat", hint: "Measure around the fullest part of your hips and seat." },
+    { key: "neck", label: "Neck circumference", hint: "Wrap a tape around the base of your neck where a collar sits. Keep it close without squeezing." },
     { key: "shoulder", label: "Shoulder width", hint: "Measure from one shoulder edge to the other across your back." },
     { key: "sleeve", label: "Sleeve length", hint: "Measure from the shoulder edge to your wrist with your arm slightly bent." },
     { key: "topLength", label: "Top length", hint: "Measure from the shoulder to your desired hem." },
@@ -943,7 +947,10 @@ export function FitGuidePage() {
 
   function applyEstimates(estimatesInCm: Record<string, string>) {
     const conversion = unit === "in" ? 1 / 2.54 : 1;
-    setValues(Object.fromEntries(Object.entries(estimatesInCm).map(([key, value]) => [key, (Math.round(Number(value) * conversion * 10) / 10).toString()])));
+    const converted = Object.fromEntries(Object.entries(estimatesInCm).map(([key, value]) => [key, (Math.round(Number(value) * conversion * 10) / 10).toString()]));
+    setValues((current) => Object.keys(estimatesInCm).length
+      ? { ...converted, ...(current.neck ? { neck: current.neck } : {}) }
+      : (current.neck ? { neck: current.neck } : {}));
   }
 
   function changeUnit(nextUnit: "cm" | "in") {
@@ -1027,6 +1034,7 @@ export function FitGuidePage() {
       <PageIntro label="A little help from the atelier" title={<>Measure with<br /><em>confidence.</em></>} description="SmartFit guides you through front and side camera views, then estimates measurements using your height for calibration. You can also enter them by hand." />
       <section className="fit-guide">
         <div className="fit-guide-intro"><Ruler size={22} /><div><b>Before you begin</b><p>Wear fitted clothing, stand naturally, and use a plain background with even lighting. Keep your full body visible in both views.</p></div></div>
+        <div className="webcam-guide-link"><div><b>Looking for a separate linear measurement tool?</b><p>Calibrate with a known-size reference, then inspect body lengths or measure an object. It does not replace SmartFit or the manual tailoring form.</p></div><Link className="button button-dark" to="/webcam-measurement">Open webcam tool <ArrowRight size={15} /></Link></div>
         <div className="self-measurement-tool">
           <div className="self-measurement-heading"><div><Eyebrow>SMART SELF-MEASUREMENT</Eyebrow><h2>A better fit starts <em>with you.</em></h2><p>Choose your fit profile, enter your height, and let SmartFit guide your camera captures.</p></div><Ruler size={22} /></div>
           <div className="self-measurement-controls">
