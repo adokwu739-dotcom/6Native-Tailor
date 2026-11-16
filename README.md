@@ -42,6 +42,20 @@ Open the frontend URL printed by Vite (normally http://localhost:5173). The API 
 
 To enable WhatsApp links, copy `.env.example` to `.env.local` and set `VITE_WHATSAPP_NUMBER` to the official business number in international format without `+`, spaces, or punctuation. Restart Vite after changing it. Never place private AI or payment credentials in a `VITE_` variable; those must be configured on a server.
 
+## Deploy to Render
+
+The root `render.yaml` defines a static storefront, FastAPI service, PostgreSQL database, and persistent backend storage for uploaded images and certificates. In the Render Dashboard, create a **Blueprint** from this repository and confirm the resources. The API service, database, and persistent disk use paid Render resources; check Render's current pricing before confirming.
+
+During the initial setup, provide `ADMIN_EMAIL` and `ADMIN_PASSWORD_HASH`. Generate the hash locally with:
+
+```bash
+python -c 'from pwdlib import PasswordHash; print(PasswordHash.recommended().hash(input("Admin password: ")))'
+```
+
+Render generates the session secrets and connects the API to PostgreSQL. The Blueprint assumes the service URLs `https://6native-tailor.onrender.com` and `https://6native-tailor-api.onrender.com`; if Render assigns different URLs, update `CORS_ORIGINS` on the API and `VITE_API_URL` on the storefront to match, then redeploy the storefront. Optionally set `VITE_WHATSAPP_NUMBER` on the storefront and redeploy to enable WhatsApp order links.
+
+After deployment, verify the API at `https://6native-tailor-api.onrender.com/api/health`. Serve the storefront over HTTPS for camera access.
+
 ## Customer accounts
 
 Customers can register and sign in at `/account`. The API stores only a name, normalized email, and Argon2 password hash; sign-in uses an HTTP-only session cookie. Set `CUSTOMER_SESSION_SECRET` to a random secret of at least 32 characters. For local HTTP development, keep `CUSTOMER_COOKIE_SECURE=false`; set it to `true` behind HTTPS. Accounts use a local SQLite database by default (`backend/customers.sqlite3`). Set `DATABASE_URL` to a persistent PostgreSQL database for production; serverless local filesystems are not durable. Email verification and password recovery are not included yet. Accounts currently provide a profile only; order requests still go through WhatsApp.
