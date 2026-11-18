@@ -14,7 +14,10 @@ import type { PoseLandmarker } from "@mediapipe/tasks-vision";
 type Point = { x: number; y: number };
 type Measurement = { id: number; label: string; mm: number; points: [Point, Point] };
 type BodyMetric = { id: string; label: string };
+type BodyMeasurementSnapshot = { id: number; takenAt: string; values: Record<string, number> };
 type PosePoint = { x: number; y: number; visibility?: number };
+
+const BODY_MEASUREMENTS_STORAGE_KEY = "6native-webcam-measurements-v1";
 
 const BODY_METRICS: BodyMetric[] = [
   { id: "shoulders", label: "Shoulder width" },
@@ -106,6 +109,7 @@ export function WebcamMeasurePage() {
   const [objectLabel, setObjectLabel] = useState("Measurement");
   const [objectPoints, setObjectPoints] = useState<Point[]>([]);
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
+  const [savedBodyMeasurements, setSavedBodyMeasurements] = useState<BodyMeasurementSnapshot[]>([]);
   const [detectingEdges, setDetectingEdges] = useState(false);
 
   const referenceMm = reference === "custom" ? Number(customWidth) : Number(reference);
@@ -115,6 +119,26 @@ export function WebcamMeasurePage() {
     if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
     streamRef.current?.getTracks().forEach((track) => track.stop());
     landmarkerRef.current?.close();
+  }, []);
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(BODY_MEASUREMENTS_STORAGE_KEY);
+      if (saved) {
+        const parsed: unknown = JSON.parse(saved);
+        if (!Array.isArray(parsed) || parsed.some((item) =>
+          typeof item !== "object" || item === null ||
+          typeof item.id !== "number" || typeof item.takenAt !== "string" ||
+          typeof item.values !== "object" || item.values === null ||
+          Object.values(item.values).some((value) => typeof value !== "number" || !Number.isFinite(value))
+        )) {
+          throw new Error("Saved measurements have an invalid format.");
+        }
+        setSavedBodyMeasurements(parsed as BodyMeasurementSnapshot[]);
+      }
+    } catch {
+      setNotice("Saved webcam measurements could not be loaded from this device.");
+    }
   }, []);
 
   function stopCamera() {
@@ -138,7 +162,7 @@ export function WebcamMeasurePage() {
     setLoading(true);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: facingRef.current }, width: { ideal: 1280 }, height: { ideal: 720 } },
+        video: { facingMode: { exact: facingRef.current }, width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: false,
       });
       streamRef.current = stream;
@@ -456,8 +480,10 @@ export function WebcamMeasurePage() {
   }
 
   function changeFacing(nextFacing: "user" | "environment") {
+    if (facingRef.current === nextFacing) return;
     facingRef.current = nextFacing;
     setFacing(nextFacing);
+    setMirror(nextFacing === "user");
     setPixelsPerMm(null);
     setCalibrationPoints([]);
     setMeasurements([]);
@@ -466,6 +492,40 @@ export function WebcamMeasurePage() {
     if (active) {
       stopCamera();
       window.setTimeout(() => void startCamera(), 0);
+    }
+  }
+
+  function saveBodyMeasurements() {
+    const values = Object.fromEntries(
+      BODY_METRICS.filter(({ id }) => metrics.includes(id) && liveMeasurements[id] !== undefined)
+        .map(({ id }) => [id, liveMeasurements[id]]),
+    );
+    if (!scaleReady || Object.keys(values).length === 0) {
+      setError("Calibrate the camera and wait for body measurements to appear before saving.");
+      return;
+    }
+    const snapshot = { id: Date.now(), takenAt: new Date().toISOString(), values };
+    const next = [snapshot, ...savedBodyMeasurements];
+    try {
+      window.localStorage.setItem(BODY_MEASUREMENTS_STORAGE_KEY, JSON.stringify(next));
+      setSavedBodyMeasurements(next);
+      setError("");
+      setNotice("Body measurements saved on this device.");
+    } catch {
+      setError("Could not save measurements in this browser. Check device storage settings and try again.");
+    }
+  }
+
+  function deleteBodyMeasurement(id: number) {
+    const next = savedBodyMeasurements.filter((snapshot) => snapshot.id !== id);
+    try {
+      if (next.length) window.localStorage.setItem(BODY_MEASUREMENTS_STORAGE_KEY, JSON.stringify(next));
+      else window.localStorage.removeItem(BODY_MEASUREMENTS_STORAGE_KEY);
+      setSavedBodyMeasurements(next);
+      setError("");
+      setNotice("Saved measurements removed from this device.");
+    } catch {
+      setError("Could not remove saved measurements. Please check your browser storage settings.");
     }
   }
 
@@ -490,7 +550,7 @@ export function WebcamMeasurePage() {
             <button type="button" className={mode === "object" ? "is-selected" : ""} aria-pressed={mode === "object"} onClick={() => setMode("object")}><Ruler size={15} /> Object</button>
           </div>
           <div className="webcam-camera-controls">
-            <label>Camera<select value={facing} onChange={(event) => changeFacing(event.target.value === "environment" ? "environment" : "user")}><option value="user">Front</option><option value="environment">Rear</option></select></label>
+            <button type="button" className="webcam-secondary-button" onClick={() => changeFacing(facing === "user" ? "environment" : "user")} disabled={loading} aria-label={`Switch to ${facing === "user" ? "rear" : "front"} camera`}><FlipHorizontal size={15} /> Switch to {facing === "user" ? "rear" : "front"} camera</button>
             <button type="button" className="webcam-secondary-button" onClick={() => setMirror((value) => !value)} aria-pressed={mirror}><FlipHorizontal size={15} /> Mirror {mirror ? "on" : "off"}</button>
           </div>
         </div>
@@ -529,7 +589,7 @@ export function WebcamMeasurePage() {
             {mode === "body" && (
               <section className="webcam-panel-section">
                 <h2>2. Body lengths</h2>
-                <p>Stand facing the camera, feet and selected areas visible. Pose is analyzed locally at up to about 30 frames per second; values refresh around 5 times per second.</p>
+                <p>First calibrate with a known-size reference, then stand facing the camera with your feet visible. Live values appear here; use “Save these measurements” to record them on this device.</p>
                 <div className="webcam-metric-options">
                   {BODY_METRICS.map(({ id, label }) => <label key={id}><input type="checkbox" checked={metrics.includes(id)} onChange={(event) => setMetrics((current) => event.target.checked ? [...current, id] : current.filter((value) => value !== id))} />{label}</label>)}
                 </div>
@@ -540,6 +600,21 @@ export function WebcamMeasurePage() {
                     <div key={id}><dt>{label}</dt><dd>{liveMeasurements[id] !== undefined && scaleReady ? `${(liveMeasurements[id] / 10).toFixed(1)} cm` : "—"}</dd></div>
                   ))}
                 </dl>
+                <button className="webcam-secondary-button webcam-save-button" type="button" onClick={saveBodyMeasurements} disabled={!scaleReady || Object.keys(liveMeasurements).length === 0}>Save these measurements</button>
+                {savedBodyMeasurements.length > 0 && (
+                  <div className="webcam-object-list">
+                    <h3>Saved on this device</h3>
+                    {savedBodyMeasurements.map((snapshot) => (
+                      <div key={snapshot.id}>
+                        <span>
+                          <b>{new Date(snapshot.takenAt).toLocaleString()}</b>
+                          <small>{BODY_METRICS.filter(({ id }) => snapshot.values[id] !== undefined).map(({ id, label }) => `${label}: ${(snapshot.values[id] / 10).toFixed(1)} cm`).join(" · ")}</small>
+                        </span>
+                        <button type="button" aria-label="Delete saved body measurements" onClick={() => deleteBodyMeasurement(snapshot.id)}><Trash2 size={15} /></button>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {metrics.includes("height") && <p className="webcam-helper">Estimated height extrapolates from nose, shoulders and ankles; it is especially approximate and may not equal standing height.</p>}
               </section>
             )}
@@ -560,7 +635,7 @@ export function WebcamMeasurePage() {
             )}
           </aside>
         </div>
-        <p className="webcam-privacy"><b>Privacy:</b> Camera frames and pose data are processed in this browser only; they are not uploaded or saved. MediaPipe’s runtime is downloaded from jsDelivr when the camera starts, and the optional OpenCV.js runtime is downloaded from docs.opencv.org only if you choose edge detection.</p>
+        <p className="webcam-privacy"><b>Privacy:</b> Camera frames and pose data are processed in this browser only and are never uploaded or saved. Body measurements are saved on this device only when you choose “Save these measurements.” MediaPipe’s runtime is downloaded from jsDelivr when the camera starts, and the optional OpenCV.js runtime is downloaded from docs.opencv.org only if you choose edge detection.</p>
       </section>
     </>
   );

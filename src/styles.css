@@ -294,7 +294,9 @@ h1, h2, p { margin-top: 0; }
 .webcam-live-values > div { display: flex; justify-content: space-between; gap: 8px; padding: 9px 0; border-bottom: 1px solid #e3e0d7; }
 .webcam-live-values dt { color: #62645e; font-size: 8px; }
 .webcam-live-values dd { margin: 0; color: var(--navy); font-size: 9px; font-weight: 600; }
+.webcam-save-button { width: 100%; margin-top: 12px; }
 .webcam-object-list { margin-top: 14px; border-top: 1px solid #e3e0d7; }
+.webcam-object-list h3 { margin: 12px 0 0; color: var(--navy); font-size: 9px; font-weight: 600; }
 .webcam-object-list > div { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #e3e0d7; }
 .webcam-object-list span { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .webcam-object-list b { overflow-wrap: anywhere; color: var(--navy); font-size: 9px; }
@@ -344,6 +346,7 @@ h1, h2, p { margin-top: 0; }
 .site-shell[data-theme="dark"] .webcam-panel-section h2,
 .site-shell[data-theme="dark"] .webcam-live-values dd,
 .site-shell[data-theme="dark"] .webcam-object-list b,
+.site-shell[data-theme="dark"] .webcam-object-list h3,
 .site-shell[data-theme="dark"] .webcam-privacy b { color: #e8e4d8; }
 .site-shell[data-theme="dark"] .webcam-page-intro > p:last-child,
 .site-shell[data-theme="dark"] .webcam-disclaimer p,
