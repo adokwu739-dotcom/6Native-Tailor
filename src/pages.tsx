@@ -77,12 +77,13 @@ type SmartFitFrame = {
   dressLengthPx: number;
 };
 
-function analyzeSmartFitFrame(result: PoseLandmarkerResult, heightCm: number): SmartFitFrame | null {
+function analyzeSmartFitFrame(result: PoseLandmarkerResult, heightCm: number, view: "front" | "side"): SmartFitFrame | null {
   try {
     const landmarks = result.landmarks[0];
     const mask = result.segmentationMasks?.[0];
     if (!landmarks || !mask || mask.width < 2 || mask.height < 2) return null;
-    if ([11, 12, 13, 14, 15, 16, 23, 24, 27, 28].some((index) => !landmarks[index] || (landmarks[index].visibility ?? 0) < 0.45)) return null;
+    const requiredLandmarks = view === "front" ? [11, 12, 13, 14, 15, 16, 23, 24, 27, 28] : [11, 12, 23, 24, 27, 28];
+    if (requiredLandmarks.some((index) => !landmarks[index] || (landmarks[index].visibility ?? 0) < 0.45)) return null;
 
     const width = mask.width;
     const height = mask.height;
@@ -137,15 +138,13 @@ function analyzeSmartFitFrame(result: PoseLandmarkerResult, heightCm: number): S
 
     const pixelDistance = (first: { x: number; y: number }, second: { x: number; y: number }) =>
       Math.hypot(first.x - second.x, first.y - second.y);
-    const wristLeft = point(15);
-    const wristRight = point(16);
-    const elbowLeft = point(13);
-    const elbowRight = point(14);
     const shoulderWidthPx = pixelDistance(shoulderLeft, shoulderRight);
-    const sleeveLengthPx = (
-      pixelDistance(shoulderLeft, elbowLeft) + pixelDistance(elbowLeft, wristLeft) +
-      pixelDistance(shoulderRight, elbowRight) + pixelDistance(elbowRight, wristRight)
-    ) / 2;
+    const sleeveLengthPx = view === "front"
+      ? (
+        pixelDistance(shoulderLeft, point(13)) + pixelDistance(point(13), point(15)) +
+        pixelDistance(shoulderRight, point(14)) + pixelDistance(point(14), point(16))
+      ) / 2
+      : 0;
     const scaleCmPerPixel = heightCm / bodyHeightPx;
     const measurementsAt = [0.32, 0.72, 1] as const;
     const widths = measurementsAt.map(torsoWidthAt);
@@ -256,6 +255,12 @@ const piecesToKeep = [
   { image: "/images/green-embroidered-tunic.jpeg", alt: "Dark green tunic with tonal embroidery", name: "Green embroidered tunic", type: "Native wear" },
   { image: "/images/burgundy-printed-coord.jpeg", alt: "Burgundy, white and green printed matching set", name: "Burgundy printed set", type: "Two-piece sets" },
   { image: "/images/burgundy-set.jpeg", alt: "Burgundy patterned top with matching trousers", name: "Burgundy patterned co-ord", type: "Two-piece sets" },
+  { image: "/images/brown-pinstripe-set.jpeg", alt: "Brown fitted outfit with a pinstripe skirt and braided details", name: "The Weave Set", type: "Two-piece sets" },
+  { image: "/images/denim-gown.jpeg", alt: "Blue denim gown with sculpted rose details", name: "Denim Rose Gown", type: "Dresses" },
+  { image: "/images/blue-tweed-co-ord.jpeg", alt: "Blue and white tweed short-sleeve shirt with matching trousers", name: "Blue Tweed Co-ord", type: "Two-piece sets" },
+  { image: "/images/black-groom-kaftan.jpeg", alt: "Black embroidered groom's kaftan and cap", name: "Black Groom's Kaftan", type: "Men's native wear" },
+  { image: "/images/sky-blue-kaftan.jpeg", alt: "Sky-blue kaftan set with white embroidery", name: "Sky Blue Kaftan", type: "Men's native wear" },
+  { image: "/images/royal-blue-gown.jpeg", alt: "Royal-blue gown with a sequined bodice and sculptural skirt", name: "Royal Blue Gown", type: "Dresses" },
 ];
 
 function Eyebrow({ children }: { children: ReactNode }) {
@@ -853,7 +858,7 @@ function SmartFitCamera({ profile, heightCm, onMeasurements }: {
     setError("");
     setProcessing(true);
     try {
-      const frame = analyzeSmartFitFrame(landmarker.detect(video), heightCm);
+      const frame = analyzeSmartFitFrame(landmarker.detect(video), heightCm, view);
       if (!frame) {
         setError("We couldn’t read a clear full-body view. Keep your head and feet in frame, face the camera, and make sure the room is well lit.");
         return;
@@ -932,6 +937,7 @@ export function FitGuidePage() {
   const [values, setValues] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");
   const [hasSaved, setHasSaved] = useState(false);
+  const [measurementsExpanded, setMeasurementsExpanded] = useState(false);
   const profileFields = profile ? selfMeasurementProfiles[profile] : [];
   const completedCount = profileFields.filter(({ key }) => values[key]?.trim()).length;
   const heightInCm = Number(height) * (unit === "in" ? 2.54 : 1);
@@ -948,9 +954,13 @@ export function FitGuidePage() {
   function applyEstimates(estimatesInCm: Record<string, string>) {
     const conversion = unit === "in" ? 1 / 2.54 : 1;
     const converted = Object.fromEntries(Object.entries(estimatesInCm).map(([key, value]) => [key, (Math.round(Number(value) * conversion * 10) / 10).toString()]));
-    setValues((current) => Object.keys(estimatesInCm).length
-      ? { ...converted, ...(current.neck ? { neck: current.neck } : {}) }
-      : (current.neck ? { neck: current.neck } : {}));
+    if (Object.keys(estimatesInCm).length) {
+      setValues((current) => ({ ...converted, ...(current.neck ? { neck: current.neck } : {}) }));
+      setMeasurementsExpanded(true);
+      setMessage("SmartFit added its estimates to the measurement fields. Review them, then save them or continue to your order.");
+    } else {
+      setValues((current): Record<string, string> => (current.neck ? { neck: current.neck } : {}));
+    }
   }
 
   function changeUnit(nextUnit: "cm" | "in") {
@@ -1043,7 +1053,7 @@ export function FitGuidePage() {
             <label>Your height · calibration<input type="number" min={unit === "in" ? 48 : 120} max={unit === "in" ? 90 : 230} step="0.1" value={height} onChange={(event) => { setHeight(event.target.value); if (Object.keys(values).length) { setValues({}); setMessage("Height changed. Capture again or re-enter measurements using the updated calibration."); } }} placeholder={unit === "in" ? "e.g. 66" : "e.g. 168"} /></label>
           </div>
           <SmartFitCamera key={`${profile}-${heightInCm}`} profile={profile} heightCm={heightInCm} onMeasurements={applyEstimates} />
-          <details className="manual-measurements">
+          <details className="manual-measurements" open={measurementsExpanded} onToggle={(event) => setMeasurementsExpanded(event.currentTarget.open)}>
             <summary>{completedCount ? "Review or edit measurements" : "Enter measurements manually instead"}</summary>
             {profile ? (
               <>
